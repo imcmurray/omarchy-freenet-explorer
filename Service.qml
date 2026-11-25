@@ -4,7 +4,9 @@ import Quickshell.Io
 import "Logic.js" as Logic
 
 // Headless service: polls the node and explorer, owns IPC and the launcher.
-Item {
+// The shell creates a third-party service with no visual parent, so the root
+// stays a QtObject.
+QtObject {
   id: root
 
   property var shell: null

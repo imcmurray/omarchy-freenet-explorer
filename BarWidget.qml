@@ -81,63 +81,65 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    visible: true
     tooltipText: Logic.tooltipText(root.nodeUp, root.explorerUp, root.hosted)
     onPressed: function(mouseButton) {
       if (mouseButton === Qt.LeftButton)
         root.toggle()
     }
 
+    // A bare Canvas child does not count as content, so WidgetButton stays
+    // invisible. iconComponent is what the bar button actually paints.
     // Down: hollow ring. Node only: ring with a core. Running: three linked nodes.
-    Canvas {
-      id: glyph
-      anchors.centerIn: parent
-      width: Style.space(16)
-      height: Style.space(16)
+    iconComponent: Component {
+      Canvas {
+        id: glyph
+        width: Style.space(16)
+        height: Style.space(16)
 
-      readonly property string mode: Logic.glyphState(root.nodeUp, root.explorerUp)
-      readonly property color foreground: (root.bar && (root.bar.foreground || root.bar.barForeground)) || Color.bar.text
-      readonly property color tint: mode === "running" ? foreground
-        : mode === "nodeOnly" ? Color.urgent
-        : Qt.rgba(foreground.r, foreground.g, foreground.b, 0.4)
+        readonly property string mode: Logic.glyphState(root.nodeUp, root.explorerUp)
+        readonly property color foreground: (root.bar && (root.bar.foreground || root.bar.barForeground)) || Color.bar.text
+        readonly property color tint: mode === "running" ? foreground
+          : mode === "nodeOnly" ? Color.urgent
+          : Qt.rgba(foreground.r, foreground.g, foreground.b, 0.4)
 
-      onModeChanged: requestPaint()
-      onTintChanged: requestPaint()
-      onWidthChanged: requestPaint()
-      onHeightChanged: requestPaint()
+        onModeChanged: requestPaint()
+        onTintChanged: requestPaint()
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
 
-      onPaint: {
-        var ctx = getContext("2d")
-        ctx.reset()
-        ctx.scale(width / 16, height / 16)
-        ctx.strokeStyle = glyph.tint
-        ctx.fillStyle = glyph.tint
-        ctx.lineWidth = 1.5
+        onPaint: {
+          var ctx = getContext("2d")
+          ctx.reset()
+          ctx.scale(width / 16, height / 16)
+          ctx.strokeStyle = glyph.tint
+          ctx.fillStyle = glyph.tint
+          ctx.lineWidth = 1.5
 
-        function dot(x, y, r) {
+          function dot(x, y, r) {
+            ctx.beginPath()
+            ctx.arc(x, y, r, 0, 2 * Math.PI)
+            ctx.fill()
+          }
+
+          if (glyph.mode === "running") {
+            ctx.beginPath()
+            ctx.moveTo(8, 3)
+            ctx.lineTo(13, 12)
+            ctx.lineTo(3, 12)
+            ctx.closePath()
+            ctx.stroke()
+            dot(8, 3, 2.5)
+            dot(13, 12, 2.5)
+            dot(3, 12, 2.5)
+            return
+          }
+
           ctx.beginPath()
-          ctx.arc(x, y, r, 0, 2 * Math.PI)
-          ctx.fill()
-        }
-
-        if (glyph.mode === "running") {
-          ctx.beginPath()
-          ctx.moveTo(8, 3)
-          ctx.lineTo(13, 12)
-          ctx.lineTo(3, 12)
-          ctx.closePath()
+          ctx.arc(8, 8, 6, 0, 2 * Math.PI)
           ctx.stroke()
-          dot(8, 3, 2.5)
-          dot(13, 12, 2.5)
-          dot(3, 12, 2.5)
-          return
+          if (glyph.mode === "nodeOnly")
+            dot(8, 8, 3)
         }
-
-        ctx.beginPath()
-        ctx.arc(8, 8, 6, 0, 2 * Math.PI)
-        ctx.stroke()
-        if (glyph.mode === "nodeOnly")
-          dot(8, 8, 3)
       }
     }
   }

@@ -438,8 +438,14 @@ else
   echo "skip: xmllint not present" >&2
 fi
 t "C20 no <image" no has icon.svg '<image'
-t "C20 no http" no has icon.svg 'http'
+# The SVG namespace is the only allowed http URL. Anything else is a remote reference.
+if grep -v -F 'xmlns="http://www.w3.org/2000/svg"' icon.svg | grep -qF 'http'; then
+  bad "C20 http outside the SVG namespace"
+fi
 t "C20 no URL href" no has_re icon.svg 'href=["'\''][[:space:]]*([a-z]+:|//)'
+t "B glyph is an iconComponent" has BarWidget.qml 'iconComponent:'
+t "B panel switch uses switchPanelFrom" has Panel.qml 'switchPanelFrom'
+t "B no switchPanelPopout" no has Panel.qml 'switchPanelPopout'
 
 # --- C21 README --------------------------------------------------------------
 for hd in Install 'One-time setup' IPC 'Example keybinding' Uninstall Security; do

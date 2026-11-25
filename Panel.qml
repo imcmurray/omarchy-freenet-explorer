@@ -262,8 +262,8 @@ Item {
         root.close()
       }
       function onTabRequested(direction) {
-        if (root.bar && typeof root.bar.switchPanelPopout === "function")
-          root.bar.switchPanelPopout(root.hostWidget, direction)
+        if (root.bar && typeof root.bar.switchPanelFrom === "function")
+          root.bar.switchPanelFrom(root.hostWidget, direction)
       }
     }
   }

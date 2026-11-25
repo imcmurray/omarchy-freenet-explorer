@@ -1,0 +1,189 @@
+#!/usr/bin/env bash
+# One-time setup: the freenet-explorer.service systemd user unit.
+set -euo pipefail
+unset CDPATH
+
+marker='# io.mcmurray.freenet-explorer user service. Safe to delete; bin/setup rewrites it.'
+unit_name=freenet-explorer.service
+unit_dir=$HOME/.config/systemd/user
+unit=$unit_dir/$unit_name
+tmp=
+
+usage() {
+  cat <<'EOF'
+usage: bin/setup [--check | --remove | -h | --help]
+  (no argument)  install or refresh the freenet-explorer.service user unit
+  --check        report what is present; changes nothing
+  --remove       stop and delete the unit written by this script
+Set FREENET_EXPLORER_DIR to use an explorer checkout other than
+~/Development/freenet-explorer.
+EOF
+}
+
+warn() {
+  echo "setup: warning: $*" >&2
+}
+
+die() {
+  echo "setup: $*" >&2
+  exit 1
+}
+
+cleanup() {
+  if [[ -n $tmp ]]; then
+    rm -f -- "$tmp"
+  fi
+}
+
+explorer_candidate() {
+  if [[ -n ${FREENET_EXPLORER_DIR:-} && -f $FREENET_EXPLORER_DIR/run.sh ]]; then
+    printf '%s\n' "$FREENET_EXPLORER_DIR"
+  else
+    printf '%s\n' "$HOME/Development/freenet-explorer"
+  fi
+}
+
+fdev_path() {
+  if command -v fdev 2>/dev/null; then
+    return 0
+  fi
+  if [[ -x $HOME/.local/bin/fdev ]]; then
+    printf '%s\n' "$HOME/.local/bin/fdev"
+    return 0
+  fi
+  return 1
+}
+
+node_listening() {
+  timeout 1 bash -c 'exec 3<>/dev/tcp/127.0.0.1/7509' >/dev/null 2>&1
+}
+
+has_marker() {
+  [[ -f $unit && ! -L $unit ]] && grep -qxF -- "$marker" "$unit"
+}
+
+reload_units() {
+  if ! command -v systemctl >/dev/null 2>&1 || ! systemctl --user daemon-reload; then
+    warn "could not reload systemd; run 'systemctl --user daemon-reload' yourself"
+  fi
+}
+
+check() {
+  local found dir
+  if found=$(fdev_path); then
+    echo "fdev: found at $found"
+  else
+    echo "fdev: missing"
+  fi
+
+  if node_listening; then
+    echo "node 127.0.0.1:7509: listening"
+  else
+    echo "node 127.0.0.1:7509: not listening"
+  fi
+
+  dir=$(explorer_candidate)
+  if [[ -f $dir/run.sh ]]; then
+    echo "explorer: $(cd -- "$dir" && pwd -P)"
+  else
+    echo "explorer: run.sh not found"
+  fi
+
+  if has_marker; then
+    echo "unit: installed (managed by bin/setup)"
+  elif [[ -e $unit || -L $unit ]]; then
+    echo "unit: installed (not managed)"
+  else
+    echo "unit: not installed"
+  fi
+}
+
+install_unit() {
+  local candidate explorer_dir
+  candidate=$(explorer_candidate)
+  [[ -f $candidate/run.sh ]] \
+    || die "no run.sh at $candidate/run.sh; set FREENET_EXPLORER_DIR to the explorer checkout"
+
+  # The trailing x keeps any newline at the end of the path for the check below.
+  explorer_dir=$(cd -- "$candidate" && pwd -P && printf x)
+  explorer_dir=${explorer_dir%x}
+  explorer_dir=${explorer_dir%$'\n'}
+
+  case $explorer_dir in
+    *[[:space:]]* | *\"* | *\'* | *\\* | *%* | *\$*)
+      die "unsafe explorer path for a systemd unit (whitespace, quote, backslash, % or \$): $explorer_dir"
+      ;;
+  esac
+
+  [[ -x $explorer_dir/run.sh ]] || warn "$explorer_dir/run.sh is not executable"
+  fdev_path >/dev/null || warn "fdev not found on PATH or at $HOME/.local/bin/fdev"
+  node_listening || warn "nothing is accepting connections on 127.0.0.1:7509"
+
+  mkdir -p "$unit_dir"
+  [[ ! -L $unit ]] || die "refusing to replace a symlink: $unit"
+  if [[ -e $unit ]] && ! has_marker; then
+    die "$unit was not written by this script; left untouched"
+  fi
+
+  trap cleanup EXIT
+  tmp=$(mktemp "$unit_dir/.freenet-explorer.XXXXXX")
+  cat >"$tmp" <<EOF
+# io.mcmurray.freenet-explorer user service. Safe to delete; bin/setup rewrites it.
+[Unit]
+Description=Freenet Explorer (localhost only)
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=${explorer_dir}
+ExecStart=${explorer_dir}/run.sh
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+EOF
+  chmod 0644 "$tmp"
+  mv -f -- "$tmp" "$unit"
+  tmp=
+
+  reload_units
+  echo "setup: unit written to $unit"
+}
+
+remove_unit() {
+  if [[ ! -e $unit && ! -L $unit ]]; then
+    echo "setup: not installed"
+    return 0
+  fi
+  has_marker || die "$unit was not written by this script; left untouched"
+
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl --user stop freenet-explorer.service || true
+  fi
+  rm -f -- "$unit"
+  reload_units
+  echo "setup: removed $unit"
+}
+
+if (($# > 1)); then
+  usage >&2
+  exit 2
+fi
+
+case ${1-} in
+  "")
+    if (($# == 1)); then
+      usage >&2
+      exit 2
+    fi
+    install_unit
+    ;;
+  --check) check ;;
+  --remove) remove_unit ;;
+  -h | --help) usage ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac

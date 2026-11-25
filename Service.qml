@@ -4,9 +4,10 @@ import Quickshell.Io
 import "Logic.js" as Logic
 
 // Headless service: polls the node and explorer, owns IPC and the launcher.
-// The shell creates a third-party service with no visual parent, so the root
-// stays a QtObject.
-QtObject {
+// The shell parents this object to null. It is an Item, not a QtObject,
+// because IpcHandler, Timer, and Process are child objects and QtObject has
+// no default property to hold them. Nothing parents it into a window.
+Item {
   id: root
 
   property var shell: null

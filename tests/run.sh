@@ -446,6 +446,8 @@ t "C20 no URL href" no has_re icon.svg 'href=["'\''][[:space:]]*([a-z]+:|//)'
 t "B glyph is an iconComponent" has BarWidget.qml 'iconComponent:'
 t "B panel switch uses switchPanelFrom" has Panel.qml 'switchPanelFrom'
 t "B no switchPanelPopout" no has Panel.qml 'switchPanelPopout'
+t "B panel keys are on PanelKeyCatcher" has Panel.qml 'onMoveRequested:'
+t "B KeyboardPanel children are items" no has Panel.qml 'Connections {'
 
 # --- C21 README --------------------------------------------------------------
 for hd in Install 'One-time setup' IPC 'Example keybinding' Uninstall Security; do

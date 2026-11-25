@@ -129,6 +129,17 @@ Item {
       id: keyCatcher
       anchors.fill: parent
 
+      onMoveRequested: function(dx, dy) {
+        if (dy !== 0)
+          root.move(dy > 0 ? 1 : -1)
+      }
+      onActivateRequested: root.activate(root.current)
+      onCloseRequested: root.close()
+      onTabRequested: function(direction) {
+        if (root.bar && typeof root.bar.switchPanelFrom === "function")
+          root.bar.switchPanelFrom(root.hostWidget, direction)
+      }
+
       Flickable {
         id: scroller
         anchors.fill: parent
@@ -244,26 +255,6 @@ Item {
         textFormat: Text.PlainText
         color: Color.popups.text
         font.family: Style.font.family
-      }
-    }
-
-    Connections {
-      target: keyCatcher
-      ignoreUnknownSignals: true
-
-      function onMoveRequested(dx, dy) {
-        if (dy !== 0)
-          root.move(dy > 0 ? 1 : -1)
-      }
-      function onActivateRequested() {
-        root.activate(root.current)
-      }
-      function onCloseRequested() {
-        root.close()
-      }
-      function onTabRequested(direction) {
-        if (root.bar && typeof root.bar.switchPanelFrom === "function")
-          root.bar.switchPanelFrom(root.hostWidget, direction)
       }
     }
   }

@@ -154,10 +154,16 @@ while IFS= read -r u; do
   esac
 done < <(grep -ohE "/dev/tcp/[^\"' )]*" "${code[@]}")
 while IFS= read -r u; do
-  [[ $u == http://127.0.0.1:8787/* ]] || bad "C8 unexpected http URL: $u"
+  case $u in
+    http://127.0.0.1:8787 | http://127.0.0.1:8787/* | \
+    http://127.0.0.1:7509 | http://127.0.0.1:7509/*) ;;
+    *) bad "C8 unexpected http URL: $u" ;;
+  esac
 done < <(grep -ohE "http://[^\"' )]*" "${qml_js[@]}")
 t "C9 api/summary present" grep -qF 'api/summary' "${qml_js[@]}"
-t "C9 exact curl argv" has Service.qml '["curl", "-sS", "--max-time", "2", "--proto", "=http", Logic.SUMMARY_URL]'
+t "C9 exact curl argv" has Service.qml '["curl", "-sS", "--max-time", "2", "--max-filesize", "65536", "--fail", "--proto", "=http", Logic.SUMMARY_URL]'
+t "C9 exact dashboard curl argv" has Service.qml '["curl", "-sS", "--max-time", "2", "--max-filesize", "262144", "--fail", "--proto", "=http", Logic.PEER_UI_URL]'
+t "C9 exact icon curl argv" has Service.qml '["curl", "-sS", "--max-time", "2", "--max-filesize", "65536", "--fail", "--proto", "=http", page]'
 # Real calls only: Panel.qml shows the node installer command as display text.
 curl_calls=$(grep -hE "[\"']curl[\"']" "${qml_js[@]}" || true)
 t "C9 no -L/--location/-X/-H/--data on curl calls" no grep -qE -- '"(-L|--location|-X|-H|--header|--data[a-z-]*)"' <<<"$curl_calls"
@@ -178,9 +184,10 @@ for lit in \
   '["systemctl", "--user", "cat", "freenet-explorer.service"]' \
   '["systemctl", "--user", "cat", "freenet.service"]' \
   '["test", "-f", root.homeDir + "/.config/systemd/user/freenet.service"]' \
-  '["bash", "-c", "command -v freenet >/dev/null 2>&1 || test -x \"$HOME/.local/bin/freenet\""]' \
+  '["bash", "-c", "test -x \"$HOME/.local/bin/freenet\" || test -x /usr/local/bin/freenet || test -x /usr/bin/freenet"]' \
   '["test", "-d", root.keptDir]' \
   '["omarchy-launch-webapp", "http://127.0.0.1:8787/"]' \
+  '["omarchy-launch-webapp", Logic.PEER_UI_URL]' \
   '["xdg-open", root.keptDir]' \
   '["bash", "-c", root.desktopScript, "freenet-explorer-desktop", root.desktopPath, root.iconPath]' \
   '["bash", "-c", root.cleanupScript, "freenet-explorer-desktop-cleanup",' \
@@ -190,11 +197,20 @@ done
 t "B1.7 fdev is never run from QML" no grep -qE "[\"']fdev[\"']" "${qml_js[@]}"
 t "B5.3 Panel uses PanelKeyCatcher" has Panel.qml 'PanelKeyCatcher'
 t "B5.3 Panel uses KeyboardPanel" has Panel.qml 'KeyboardPanel'
+t "B5.3 Panel has a hero" has Panel.qml 'PanelHero'
+t "B5.3 Panel handles letter keys" has Panel.qml 'onTextKey:'
 texts=$(grep -cE '^[[:space:]]*Text[[:space:]]*\{' Panel.qml || true)
 plain=$(grep -cF 'textFormat: Text.PlainText' Panel.qml || true)
 [[ $texts == "$plain" ]] || bad "B5.6 Text items ($texts) without PlainText ($plain plain)"
 t "B5.5 node install command shown" has Panel.qml 'curl -fsSL https://freenet.org/install.sh | sh'
 t "B5.5 popup does not mention Docker" no grep -qi docker Panel.qml
+t "B5 apps use a validated icon url" has Panel.qml 'Logic.localIconUrl'
+t "B5 explorer row is a switch" has Panel.qml 'explorerSwitch'
+t "B5 explorer is an app tile" has Panel.qml 'explorerApp'
+t "B5 peer UI is an app tile" has Panel.qml 'peerApp'
+t "B5 hosted count opens the peer UI" has Panel.qml 'openHost'
+t "B5 aegis opens only its local web container" has Service.qml 'Logic.aegisLaunchUrl(root.aegisPath)'
+t "B5 app tiles do not use onEntered" no grep -qF 'onEntered:' Panel.qml
 
 # --- Source must parse: U+2028/U+2029 end a line inside JS source -----------
 for f in "${qml_js[@]}"; do
@@ -406,11 +422,11 @@ for (const s of ["not json", "", "{}", "null", "5", "[]", '{"node":null}', '{"no
   '{"node":{"hosted":1e999}}', '{"node":{"hosted":null}}', '{"total":{"n":4}}'])
   eq("parse " + JSON.stringify(s), L.parseHosted(s), -1);
 const dot = "·";
-eq("tip down", L.tooltipText(false, false, -1), `Freenet Explorer ${dot} node down`);
-eq("tip explorer without node", L.tooltipText(false, true, 3), `Freenet Explorer ${dot} node down`);
-eq("tip node only", L.tooltipText(true, false, -1), `Freenet Explorer ${dot} node up, explorer stopped`);
-eq("tip hosted", L.tooltipText(true, true, 12), `Freenet Explorer ${dot} 12 hosted`);
-eq("tip running", L.tooltipText(true, true, -1), `Freenet Explorer ${dot} explorer running`);
+eq("tip down", L.tooltipText(false, false, -1), `Freenet ${dot} node down`);
+eq("tip explorer without node", L.tooltipText(false, true, 3), `Freenet ${dot} node down`);
+eq("tip node only", L.tooltipText(true, false, -1), `Freenet ${dot} node up, explorer stopped`);
+eq("tip hosted", L.tooltipText(true, true, 12), `Freenet ${dot} 12 hosted`);
+eq("tip running", L.tooltipText(true, true, -1), `Freenet ${dot} explorer running`);
 eq("glyph down", L.glyphState(false, false), "down");
 eq("glyph explorer without node", L.glyphState(false, true), "down");
 eq("glyph undefined", L.glyphState(undefined, undefined), "down");
@@ -424,6 +440,153 @@ eq("PLUGIN_ID", L.PLUGIN_ID, "io.mcmurray.freenet-explorer");
 eq("SETUP_PATH", L.SETUP_PATH, "~/.config/omarchy/plugins/io.mcmurray.freenet-explorer/bin/setup");
 eq("UI_URL", L.UI_URL, "http://127.0.0.1:8787/");
 eq("SUMMARY_URL", L.SUMMARY_URL, "http://127.0.0.1:8787/api/summary");
+eq("PEER_UI_URL", L.PEER_UI_URL, "http://127.0.0.1:7509/");
+eq("peers 27", L.parsePeerCount("Connected to 27 peers"), 27);
+eq("peers 1", L.parsePeerCount("Connected to 1 peer"), 1);
+eq("peers 0", L.parsePeerCount("<span>Connected to 0 peers</span>"), 0);
+eq("peers missing", L.parsePeerCount("no banner"), -1);
+eq("peers padded", L.parsePeerCount("Connected to 00027 peers"), -1);
+eq("peers first", L.parsePeerCount("Connected to 27 peers Connected to 3 peers"), 27);
+const atlas = "/v1/contract/web/DocKeyA111111111111111111111111111111111111/";
+const river = "/v1/contract/web/DocKeyB111111111111111111111111111111111111/";
+eq("place url", L.placeUrl(atlas), "http://127.0.0.1:7509" + atlas);
+for (const badPath of ["", atlas.slice(0, -1), atlas + "extra", "http://127.0.0.1:7509" + atlas,
+  atlas + "?x=1", "/v1/contract/web/short/", "/v1/contract/web/../etc/", "javascript:alert(1)",
+  atlas + "\n", "//evil.example" + atlas])
+  eq("reject " + JSON.stringify(badPath), L.placeUrl(badPath), "");
+const page = [
+  '<a href="/v1/contract/web/NOTINLIST12345678/">Secret</a>',
+  "<span>Connected to 27 peers</span>",
+  "<h2>Freenet Links</h2>",
+  '<ul class="app-list">',
+  '<li><a href="' + atlas + '">Atlas</a>',
+  '<p class="note">invite <a href="https://freenet.org/quickstart#invite-form">invite</a></p></li>',
+  '<li><a href="https://evil.example' + atlas + '">Evil</a></li>',
+  '<li><a href="' + river + '">River Chat</a></li>',
+  '<li><a href="' + atlas + '">Atlas again</a></li>',
+  '<li><a href="/v1/contract/web/DocKeyC111111111111111111111111111111111111/"><img src="x">Mail</a></li>',
+  '<li><a href="/permission/apps">Review or revoke</a></li>',
+  "</ul>",
+  '<a href="/v1/contract/web/DocKeyD111111111111111111111111111111111111/">freenet.org</a>'
+].join("\n");
+const places = L.parsePlaces(page);
+eq("place count", places.length, 2);
+eq("place 0", places[0] && places[0].label, "Atlas");
+eq("place 0 path", places[0] && places[0].path, atlas);
+eq("place 1", places[1] && places[1].label, "River Chat");
+eq("places without heading", L.parsePlaces('<a href="' + atlas + '">Atlas</a>').length, 0);
+eq("amp label", L.parsePlaces('<h2>Freenet Links</h2><ul><a href="' + atlas + '">A &amp; B</a></ul>').length, 0);
+eq("peer url", L.peerPageUrl("192.0.2.55:2408"), "http://127.0.0.1:7509/peer/192.0.2.55:2408");
+eq("peer url rejects path", L.peerPageUrl("192.0.2.55:2408/x"), "");
+eq("peer url rejects padded", L.peerPageUrl("077.1.1.1:80"), "");
+const contractKey = "DocKeyE111111111111111111111111111111111111";
+eq("contract url", L.contractPageUrl(contractKey), "http://127.0.0.1:7509/contract/" + contractKey);
+eq("contract url rejects slash", L.contractPageUrl(contractKey + "/x"), "");
+eq("copy addr", L.copyable("192.0.2.55:2408"), "192.0.2.55:2408");
+eq("copy rejects markup", L.copyable("<img src=x>"), "");
+eq("copy rejects space", L.copyable("not this"), "");
+const dash = [
+  '<span class="badge" data-version="0.2.166">v0.2.166</span>',
+  '<code class="pub-key" id="peer-id" title="Click to copy">DocPeer1111111111</code>',
+  '<span class="uptime">Up 5m</span>',
+  '<span>Connected to 2 peers</span>',
+  '<span class="metric-value">2</span><span class="metric-label">Ring peers</span>',
+  '<span class="metric-value">1</span><span class="metric-label">Hosted contracts</span>',
+  '<span class="metric-value">4</span><span class="metric-label">Conn attempts</span>',
+  'Upload <b>1.88 KB/s</b> Download <b>923 B/s</b>',
+  '<span class="transfer-label">Uploaded</span><span class="transfer-value">758.1 KB</span>',
+  '<span class="transfer-label">Downloaded</span><span class="transfer-value">5.7 MB</span>',
+  'NAT hole punching: 28/51 successful',
+  'External address: <code>203.0.113.10</code> UDP port: <code>51820</code>',
+  'Your location: 0.9350',
+  'Closest limit: <strong>contract state</strong> — 177.2 KB of 256.0 MB (0%)',
+  '<h2>Freenet Links</h2><ul><li><a href="' + atlas + '">Atlas</a><p class="note">Decentralized search.</p></li></ul>',
+  '<table data-table-id="peers"><tbody>',
+  '<tr class="peer-row"><td data-sort="192.0.2.55:2408"><code>192.0.2.55:2408</code></td><td data-sort="0.93">0.9368</td><td data-sort="Peer">Peer</td><td data-sort="1">30.4 KB</td><td data-sort="2">96.7 KB</td><td data-sort="3">4m 14s</td></tr>',
+  '<tr class="peer-row"><td data-sort="999.1.1.1:80"><code>999.1.1.1:80</code></td><td>0.1</td><td>Peer</td><td>1 KB</td><td>1 KB</td><td>1s</td></tr>',
+  '</tbody></table>',
+  '<table data-table-id="hosting"><tbody><tr><td title="' + contractKey + '" data-sort="' + contractKey + '"><a href="/contract/' + contractKey + '"><code>DocKeyE1...</code></a> <span>in use</span></td><td class="right" data-sort="7">7</td><td class="right" data-sort="181429">177.2 KB</td><td class="right" data-sort="7">7</td></tr></tbody></table>',
+  '<a href="/v1/contract/web/DocKeyD111111111111111111111111111111111111/">not in the list section</a>'
+].join("\n");
+const parsed = L.parseDashboard(dash);
+eq("dash peers", parsed.peerCount, 2);
+eq("dash version", parsed.version, "0.2.166");
+eq("dash uptime", parsed.uptime, "Up 5m");
+eq("dash id", parsed.peerId, "DocPeer1111111111");
+eq("dash ring", parsed.ringPeers, "2");
+eq("dash hosted", parsed.hosted, "1");
+eq("dash up", parsed.upload, "1.88 KB/s");
+eq("dash down", parsed.download, "923 B/s");
+eq("dash nat", parsed.nat, "28/51");
+eq("dash external", parsed.external, "203.0.113.10:51820");
+eq("dash loc", parsed.location, "0.9350");
+eq("dash state pct", parsed.statePct, 0);
+eq("dash places", parsed.places.length, 1);
+eq("dash place note", parsed.places[0] && parsed.places[0].detail, "Decentralized search.");
+eq("note keeps link word", L.plainFact('Freenet. <a href="https://github.com/freenet/mail">Source</a>.', 80), "Freenet. Source.");
+eq("dash peer rows", parsed.peers.length, 1);
+eq("dash peer addr", parsed.peers[0] && parsed.peers[0].addr, "192.0.2.55:2408");
+eq("dash peer sent", parsed.peers[0] && parsed.peers[0].sent, "30.4 KB");
+eq("dash contracts", parsed.contracts.length, 1);
+eq("dash contract size", parsed.contracts[0] && parsed.contracts[0].size, "177.2 KB");
+eq("dash contract state", parsed.contracts[0] && parsed.contracts[0].state, "in use");
+eq("uploaded nested", L.parseDashboard('<span class="transfer-label">Uploaded</span> <span class="transfer-value">15.7 MB <span class="transfer-detail">(peak 1 MB/s)</span></span>').uploaded, "15.7 MB");
+const pad = "A".repeat(700);
+const longHost = '<table data-table-id="hosting"><tbody><tr><td title="' + contractKey + '"><span title="' + pad + '">next to evict</span> <span>in use</span></td><td>177.2 KB</td></tr></tbody></table>';
+const longParsed = L.parseContracts(longHost);
+eq("long contract", longParsed.length, 1);
+eq("long contract state", longParsed[0] && longParsed[0].state, "in use, next to evict");
+eq("long contract size", longParsed[0] && longParsed[0].size, "177.2 KB");
+eq("summary kept", L.parseSummary('{"node":{"hosted":2},"kept":{"n":3},"total":{"n":9}}').kept, 3);
+eq("summary total", L.parseSummary('{"node":{"hosted":2},"kept":{"n":3},"total":{"n":9}}').total, 9);
+eq("summary hosted", L.parseSummary('{"node":{"hosted":2},"kept":{"n":3},"total":{"n":9}}').hosted, 2);
+eq("listed metric", L.listedCount("18", 12), 18);
+eq("listed parsed wins", L.listedCount("1", 12), 12);
+eq("listed junk", L.listedCount("18 contracts", 12), 12);
+eq("listed empty", L.listedCount("", 4), 4);
+eq("listed huge", L.listedCount("1234567", 1), 1);
+const logo = atlas + "freenet_logo.svg";
+eq("sandbox page", L.sandboxPageUrl(atlas), "http://127.0.0.1:7509" + atlas + "?__sandbox=1");
+eq("sandbox rejects query", L.sandboxPageUrl(atlas + "?x=1"), "");
+eq("place url has no query", L.placeUrl(atlas).indexOf("?") < 0, true);
+eq("icon absolute", L.contractIconUrl(atlas, logo), "http://127.0.0.1:7509" + logo);
+eq("icon relative", L.contractIconUrl(atlas, "freenet_logo.svg"), "http://127.0.0.1:7509" + logo);
+eq("icon unquoted", L.iconUrlFromPage("<link rel=icon type=image/svg+xml href=" + logo + ">", atlas), "http://127.0.0.1:7509" + logo);
+eq("icon quoted", L.iconUrlFromPage('<link rel="icon" href="' + logo + '">', atlas), "http://127.0.0.1:7509" + logo);
+eq("icon shortcut", L.iconUrlFromPage("<link rel='shortcut icon' href='favicon.ico'>", atlas), "http://127.0.0.1:7509" + atlas + "favicon.ico");
+eq("icon skips remote", L.iconUrlFromPage('<link rel=icon href="https://cdn.example/a.svg"><link rel=icon href="' + logo + '">', atlas), "http://127.0.0.1:7509" + logo);
+eq("icon https rejected", L.contractIconUrl(atlas, "https://cdn.example/a.svg"), "");
+eq("icon data rejected", L.contractIconUrl(atlas, "data:image/svg+xml,abcd"), "");
+eq("icon parent rejected", L.contractIconUrl(atlas, "../freenet_logo.svg"), "");
+eq("icon query rejected", L.contractIconUrl(atlas, "freenet_logo.svg?x=1"), "");
+eq("icon other contract", L.contractIconUrl(atlas, river + "freenet_logo.svg"), "");
+eq("icon javascript", L.contractIconUrl(atlas, "javascript:alert(1)"), "");
+eq("icon protocol relative", L.contractIconUrl(atlas, "//cdn.example/a.svg"), "");
+eq("icon stylesheet ignored", L.iconUrlFromPage('<link rel=stylesheet href="' + logo + '">', atlas), "");
+eq("img is not an icon", L.iconUrlFromPage('<img src="' + logo + '">', atlas), "");
+eq("local icon ok", L.localIconUrl("http://127.0.0.1:7509" + logo), "http://127.0.0.1:7509" + logo);
+eq("local icon query", L.localIconUrl("http://127.0.0.1:7509" + logo + "?x=1"), "");
+eq("local icon host", L.localIconUrl("http://127.0.0.1:8787" + logo), "");
+eq("local icon evil host", L.localIconUrl("http://127.0.0.1:7509.evil/a.svg"), "");
+eq("local icon sandbox", L.localIconUrl(L.sandboxPageUrl(atlas)), "");
+eq("mark atlas", L.appMark("Atlas"), "atlas");
+eq("mark river", L.appMark("River Chat"), "river");
+eq("mark mail", L.appMark("Freenet Mail"), "mail");
+eq("mark delta", L.appMark("Delta"), "delta");
+eq("mark ghost", L.appMark("Ghostkey Identity Vault"), "ghost");
+eq("mark site", L.appMark("freenet.org"), "freenet");
+eq("mark aegis", L.appMark("Aegis"), "aegis");
+eq("mark unknown", L.appMark("Something Else"), "");
+const aegisPath = "/v1/contract/web/" + contractKey + "/";
+eq("aegis path", L.aegisContractPath("  http://127.0.0.1:7509" + aegisPath + "\n"), aegisPath);
+eq("aegis url", L.aegisLaunchUrl(aegisPath), "http://127.0.0.1:7509" + aegisPath);
+eq("aegis empty", L.aegisLaunchUrl(""), "");
+eq("aegis pages", L.aegisLaunchUrl("https://imcmurray.github.io/Aegis/?mode=freenet&ws=127.0.0.1:7509"), "");
+eq("aegis query", L.aegisLaunchUrl(aegisPath + "?register=1"), "");
+eq("aegis other host", L.aegisLaunchUrl("http://127.0.0.1:8787" + aegisPath), "");
+eq("monogram", L.monogram("Atlas"), "A");
+eq("monogram empty", L.monogram(""), "");
+eq("monogram symbol", L.monogram("—"), "");
 process.exit(bad ? 1 : 0);
 EOF
   node "$work/logic.js" "$root/Logic.js" || bad "C19 Logic.js unit checks"
@@ -467,7 +630,13 @@ done
 for m in start stop open status; do
   t "C21 README IPC $m" has_line README.md "omarchy-shell io.mcmurray.freenet-explorer $m"
 done
-t "C21 keybinding line" has_line README.md 'o.bind("SUPER + CTRL + F", "Freenet Explorer", "omarchy-shell io.mcmurray.freenet-explorer open")'
+t "C21 keybinding line" has_line README.md 'o.bind("SUPER + CTRL + F", "Freenet", "omarchy-shell io.mcmurray.freenet-explorer open")'
+t "C21 install pipe is not a shell fence" awk '
+  /^```(bash|sh|shell)$/ { fence=1; next }
+  /^```/ { fence=0; next }
+  fence && /curl/ && /\|[[:space:]]*(ba)?sh/ { bad=1 }
+  END { exit bad ? 1 : 0 }
+' README.md
 t "C21 no 'Not written yet'" no has README.md 'Not written yet'
 t "C21 no bogus github link" no has_re README.md 'https://github\.com/([^A-Za-z0-9]|$)'
 
@@ -484,10 +653,10 @@ apps="$work/desk home/.local/share/applications"
 desk=$apps/io.mcmurray.freenet-explorer.desktop
 icon='/opt/plug in/$(touch pwned)/icon.svg'
 write() { (cd "$work" && bash -c "$write_script" freenet-explorer-desktop "$desk" "$icon"); }
-printf '%s\n' '[Desktop Entry]' 'Type=Application' 'Name=Freenet Explorer' \
-  "Comment=Local browser for what this machine's Freenet node is hosting" \
+printf '%s\n' '[Desktop Entry]' 'Type=Application' 'Name=Freenet' \
+  "Comment=Local entry point for this machine's Freenet peer, its apps, and Freenet Explorer" \
   'Exec=omarchy-shell io.mcmurray.freenet-explorer open' "Icon=$icon" 'Terminal=false' \
-  'Categories=Network;' 'Keywords=freenet;explorer;' 'X-Freenet-Explorer-Managed=true' >"$work/desk.want"
+  'Categories=Network;' 'Keywords=freenet;explorer;aegis;' 'X-Freenet-Explorer-Managed=true' >"$work/desk.want"
 t "C23 write succeeds" write
 t "C23 content matches the contract" cmp "$work/desk.want" "$desk"
 t "C23 mode 0644" test "$(stat -c %a "$desk" 2>/dev/null)" = 644

@@ -1,23 +1,23 @@
 {
   "schemaVersion": 1,
   "id": "io.mcmurray.freenet-explorer",
-  "name": "Freenet Explorer",
+  "name": "Freenet",
   "version": "0.1.0",
   "author": "Ian McMurray",
   "license": "MIT",
-  "description": "Bar status and controls for the local Freenet Explorer.",
+  "description": "Bar entry point for the local Freenet peer, its apps, and Freenet Explorer.",
   "kinds": ["service", "bar-widget"],
   "entryPoints": {
     "service": "Service.qml",
     "barWidget": "BarWidget.qml"
   },
   "barWidget": {
-    "displayName": "Freenet Explorer",
-    "description": "Node and explorer status. Click to start, stop, or open the UI.",
+    "displayName": "Freenet",
+    "description": "Local peer, its apps, and Freenet Explorer. Click to open.",
     "category": "Network",
-    "aliases": ["freenet", "explorer"],
+    "aliases": ["freenet", "explorer", "aegis"],
     "allowMultiple": false,
     "defaultSection": "right"
   },
-  "keywords": ["freenet", "explorer"]
+  "keywords": ["freenet", "explorer", "aegis", "peer"]
 }

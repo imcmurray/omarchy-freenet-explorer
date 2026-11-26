@@ -74,8 +74,24 @@ BarWidget {
 
   onBarChanged: assignPanel()
   onSettingsChanged: assignPanel()
-  onServiceChanged: assignPanel()
+  onServiceChanged: {
+    assignPanel()
+    if (root.service && root.opened)
+      root.service.panelOpened()
+  }
+  onOpenedChanged: {
+    if (!root.service)
+      return
+    if (root.opened)
+      root.service.panelOpened()
+    else
+      root.service.panelClosed()
+  }
   Component.onCompleted: Qt.callLater(root.retryLookup)
+  Component.onDestruction: {
+    if (root.service && root.opened)
+      root.service.panelClosed()
+  }
 
   BarIconButton {
     id: button

@@ -224,10 +224,10 @@ Three states, each visually distinct:
 
 Tooltip (the `BarIconButton.tooltipText`, which is the hover text):
 
-- node down: `Freenet Explorer · node down`
-- node up, explorer stopped: `Freenet Explorer · node up, explorer stopped`
-- both running, count known: `Freenet Explorer · N hosted`
-- both running, count unknown: `Freenet Explorer · explorer running`
+- node down: `Freenet · node down`
+- node up, explorer stopped: `Freenet · node up, explorer stopped`
+- both running, count known: `Freenet · N hosted`
+- both running, count unknown: `Freenet · explorer running`
 
 Click toggles the popup. Do not start or stop anything on a bare left click.
 
@@ -251,7 +251,7 @@ Exit 0 means the port accepted. The same command with `8787` is the explorer
 probe. Never probe any other host.
 
 When 8787 is up, and only then, GET `http://127.0.0.1:8787/api/summary`
-with a two-second timeout. curl's default `Host: 127.0.0.1:8787` is one of
+with a two-second timeout and a 64 KiB cap. curl's default `Host: 127.0.0.1:8787` is one of
 the three hosts the explorer allows (`127.0.0.1:8787`, `localhost:8787`,
 `[::1]:8787` in `explorer/server.py`). Do not set a different Host. Do not
 follow a redirect to another host. Read `node.hosted` only. That field is
@@ -271,8 +271,8 @@ If the JSON is invalid or `node.hosted` is missing, leave the count unknown.
 
 Four rows, plus a fifth that depends on the node:
 
-1. Start explorer. `systemctl --user start freenet-explorer.service`.
-2. Stop explorer. `systemctl --user stop freenet-explorer.service`.
+1. Explorer switch. On runs `systemctl --user start freenet-explorer.service`. Off runs `systemctl --user stop freenet-explorer.service`.
+2. The same switch is the only start and stop control. There is no second row for the other verb.
 3. Open UI. `omarchy-launch-webapp http://127.0.0.1:8787/`.
 4. Open kept files. `xdg-open` the kept directory.
 5. Node row. See below.
@@ -395,7 +395,7 @@ The menu's Apps rows come from `DesktopEntries`
 `plugins/menu/Menu.qml` `mergeAppRows`). A `.desktop` file in
 `~/.local/share/applications/` shows up there, and in the dock app grid
 opened by SUPER+ALT+SPACE (`omarchy-shell omarchy.dock apps`). That is the
-launcher entry. Searching "Freenet Explorer" from the menu finds it via
+launcher entry. Searching "Freenet" from the menu finds it via
 the desktop `Name` and `Keywords`.
 
 Okomart (`b.okomart`, `~/.config` is not where it lives; the pattern is in
@@ -415,13 +415,13 @@ lacks the marker `X-Freenet-Explorer-Managed=true`.
 ```ini
 [Desktop Entry]
 Type=Application
-Name=Freenet Explorer
-Comment=Local browser for what this machine's Freenet node is hosting
+Name=Freenet
+Comment=Local entry point for this machine's Freenet peer, its apps, and Freenet Explorer
 Exec=omarchy-shell io.mcmurray.freenet-explorer open
 Icon=<plugin dir>/icon.svg
 Terminal=false
 Categories=Network;
-Keywords=freenet;explorer;
+Keywords=freenet;explorer;aegis;
 X-Freenet-Explorer-Managed=true
 ```
 
@@ -446,12 +446,12 @@ Do not install a Hyprland binding. Document this example in the README,
 matching `~/.config/hypr/bindings.lua`:
 
 ```lua
-o.bind("SUPER + CTRL + F", "Freenet Explorer", "omarchy-shell io.mcmurray.freenet-explorer open")
+o.bind("SUPER + CTRL + F", "Freenet", "omarchy-shell io.mcmurray.freenet-explorer open")
 ```
 
 ## Security
 
-The plugin must not weaken the explorer.
+The plugin must not weaken Freenet or the explorer.
 
 - Never listen on a port. Never proxy 8787 or 7509. Never call
   `firewall-cmd`, `iptables`, `nft`, or `ufw`. Never pass `--port` or a

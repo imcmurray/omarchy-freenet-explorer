@@ -1,10 +1,17 @@
 # Freenet for Omarchy
 
-A bar glyph and a panel for the Freenet peer on this machine. It is the local entry point: whether the peer is connected, the apps that peer already lists, Aegis, and a local [Freenet Explorer](https://github.com/freenet/freenet-explorer) checkout. The explorer serves http://127.0.0.1:8787/. The node dashboard is http://127.0.0.1:7509/. Nothing in this plugin listens on a port. Freenet pages stay on localhost. When this node is connected, the Aegis tile opens Aegis from the peer itself, using the web-container path in `~/.config/freenet/aegis-web.path`.
+A bar icon and keyboard panel for Omarchy users who run, or want to run, a Freenet node on their own machine.
 
 ![The Freenet panel open from the bar](preview.png)
 
 The listing image uses a sample peer id and the documentation address 203.0.113.10. It shows the Aegis tile and the Explorer switch. Peers and hosted contracts start collapsed.
+
+## At a glance
+
+- A bar glyph shows whether your node and Freenet Explorer are running.
+- The panel shows peer count, traffic, storage, the apps your node lists, Aegis when it is set up, and a switch to start or stop Freenet Explorer.
+- It does not install Freenet, does not run an installer, does not need root, and never listens on a port. It only talks to the node at `127.0.0.1:7509` and the explorer at `127.0.0.1:8787`.
+- This is the Rust Freenet from https://freenet.org/, not the old Java Freenet (Hyphanet). The AUR package named `freenet` is that old client.
 
 The glyph refreshes every 10 seconds:
 
@@ -14,23 +21,18 @@ The glyph refreshes every 10 seconds:
 | node up, explorer stopped | 7509 accepts, 8787 does not | urgent-colored ring with a dot |
 | both running | 7509 and 8787 accept | three linked dots in the bar color |
 
-Left-click the glyph to open the panel. The top of it is this node's own dashboard: peer count, up and down rates, storage, and the apps from its Freenet Links list, plus Freenet Explorer, the peer UI, and Aegis. Each app is a block with its icon and its name. The hosted count at the top right opens the peer UI. Enter on a collapsed row shows the peers or the hosted contracts. Enter on a Freenet app, a peer, a contract, or Aegis opens that page in the browser through `127.0.0.1:7509` only. Enter on Freenet Explorer opens http://127.0.0.1:8787/. The Explorer row is a switch: on starts the user service, off stops it. `c` copies a peer address, a contract key, or this node's peer id. `/` filters the list and still searches inside a collapsed section. `r` refreshes, `e` opens the explorer, `u` opens the peer UI, and Esc closes.
+Left-click the glyph to open the panel.
 
-When the node is not running, or it is up and has no peers, the first rows say how to install it, start the user service, or open the peer UI.
+The name on the bar and in the launcher is Freenet. Plugin id: `io.mcmurray.freenet-explorer`. License: [MIT](LICENSE). The id stays, so an install that already uses it keeps working. The Aegis tile icon is Material Symbols Outlined `encrypted_add`, Apache-2.0, Google, kept in `aegis.svg`.
 
-Plugin id: `io.mcmurray.freenet-explorer`. License: [MIT](LICENSE). The id stays, so an install that already uses it keeps working. The name on the bar and in the launcher is Freenet. The Aegis tile icon is Material Symbols Outlined `encrypted_add`, Apache-2.0, Google, kept in `aegis.svg`.
+## Requirements
 
-## What Freenet is
+- Omarchy with the shell plugin system (verified on 4.5.0).
+- The Rust Freenet node from https://freenet.org/quickstart/, listening on `127.0.0.1:7509`. The AUR package named `freenet` is the old Java client and must not be used.
+- A Freenet Explorer checkout, if you want the explorer. Its `run.sh` starts the UI on `127.0.0.1:8787`.
+- `curl` and `systemctl`, which a normal Omarchy install already has.
 
-Freenet is a peer-to-peer network. This computer runs one peer. Other peers are the rest of the network. The panel is how you look at this peer and open what it is hosting.
-
-The peer UI at http://127.0.0.1:7509/ is the node's own dashboard. App tiles from the network come from that dashboard's Freenet Links list, and each one opens only on `127.0.0.1:7509`. The panel does not invent contract ids. If this node does not list an app, that tile is not shown. Freenet Explorer and the peer UI are this machine's own pages, so they are shown beside that list.
-
-Aegis is the password manager. The tile is shown when the node is connected and `~/.config/freenet/aegis-web.path` holds the web-container path this peer serves, so Aegis runs in Freenet mode. The GitHub Pages site stays a browser vault: this peer refuses its websocket. The vault delegate is registered on the peer, once, by Aegis itself. This plugin does not register it, and the tile does not add `register=1`.
-
-Freenet Explorer is the local index at http://127.0.0.1:8787/. The switch at the bottom starts and stops that user service. Kept files belong to the explorer.
-
-The plugin does not install Freenet, publish a website, or register a delegate. When no node is present, the panel shows the official install command and does not run it.
+The plugin does not install packages, does not run the Freenet installer, and does not need root.
 
 ## Install
 
@@ -44,12 +46,6 @@ omarchy plugin add https://github.com/imcmurray/omarchy-freenet-explorer.git --e
 omarchy bar move io.mcmurray.freenet-explorer --section right
 ```
 
-From this machine's local checkout:
-
-```bash
-omarchy plugin add file:///home/ianm/Development/omarchy-freenet-explorer --enable --yes
-```
-
 Any other git URL works the same way:
 
 ```bash
@@ -60,18 +56,9 @@ omarchy plugin add <git-url> --enable --yes
 
 If the bar does not show the glyph, run `omarchy-restart-shell`.
 
-## Requirements
-
-- Omarchy with the shell plugin system (verified on 4.5.0).
-- The Rust Freenet node from https://freenet.org/quickstart/, listening on `127.0.0.1:7509`. The AUR package named `freenet` is the old Java client and must not be used.
-- A Freenet Explorer checkout whose `run.sh` starts the UI on `127.0.0.1:8787`.
-- `curl` and `systemctl`, which a normal Omarchy install already has.
-
-The plugin does not install packages, does not run the Freenet installer, and does not need root.
-
 ## One-time setup
 
-Plugins cannot ship a systemd unit, so run this once after install:
+Plugins cannot ship a systemd unit. Run this once after install:
 
 ```bash
 ~/.config/omarchy/plugins/io.mcmurray.freenet-explorer/bin/setup
@@ -79,7 +66,7 @@ Plugins cannot ship a systemd unit, so run this once after install:
 
 If the file is not executable, run it with `bash` followed by the same path.
 
-It writes `~/.config/systemd/user/freenet-explorer.service`, which runs the explorer's `run.sh`, and reloads systemd. It does not enable or start the unit. It needs no root access and does not download anything.
+It writes `~/.config/systemd/user/freenet-explorer.service`, which runs the explorer's `run.sh`, and reloads systemd. It does not enable or start the unit. It does not need root and does not download anything.
 
 - `FREENET_EXPLORER_DIR` points it at a checkout other than `~/Development/freenet-explorer`. If that directory has no `run.sh`, setup uses `~/Development/freenet-explorer`.
 - `bin/setup --check` reports what is present and changes nothing.
@@ -99,7 +86,15 @@ The panel's Start button does not need this.
 
 ## What the panel shows
 
-Numbers, peer rows, and app names come from this machine's dashboard at http://127.0.0.1:7509/, and only while the panel is open. The hosted and kept counts in the title come from the explorer's `GET /api/summary`. Clicking that count opens the peer UI. The panel does not invent contract ids. If this node does not list an app, the panel does not show it, except Aegis, Freenet Explorer, and the peer UI. Those last two are this machine's own pages, not contracts. Aegis is shown when the node is connected and `~/.config/freenet/aegis-web.path` holds a `/v1/contract/web/<id>/` path. That page is served by this peer, so Aegis runs in Freenet mode. The GitHub Pages site stays a browser vault: this peer refuses its websocket.
+The top of the panel is this node's own dashboard: peer count, up and down rates, storage, and the apps from its Freenet Links list, plus Freenet Explorer, the peer UI, and Aegis. Each app is a block with its icon and its name. The hosted count at the top right opens the peer UI.
+
+Numbers, peer rows, and app names come from http://127.0.0.1:7509/, and only while the panel is open. The hosted and kept counts in the title come from the explorer's `GET /api/summary`.
+
+When the node is not running, or it is up and has no peers, the first rows say how to install it, start the user service, or open the peer UI.
+
+Enter on a collapsed row shows the peers or the hosted contracts. Enter on a Freenet app, a peer, a contract, or Aegis opens that page in the browser through `127.0.0.1:7509` only. Enter on Freenet Explorer opens http://127.0.0.1:8787/. The Explorer row is a switch: on starts the user service, off stops it.
+
+`c` copies a peer address, a contract key, or this node's peer id. Copied text is one token of letters, digits, and `:./_-`, at most 180 characters. `/` filters the list and still searches inside a collapsed section.
 
 | Row | Enter does |
 | --- | --- |
@@ -118,8 +113,6 @@ Numbers, peer rows, and app names come from this machine's dashboard at http://1
 | Open peer UI | Opens http://127.0.0.1:7509/ |
 | Open kept files | Opens the kept folder in the file manager, if it exists |
 
-`c` copies the address or key on the highlighted row. Copied text is one token of letters, digits, and `:./_-`, at most 180 characters.
-
 ### Keyboard
 
 | Key | Action |
@@ -133,6 +126,18 @@ Numbers, peer rows, and app names come from this machine's dashboard at http://1
 | u | Open the peer UI |
 | Esc | Close the panel |
 | Tab | Move to the next panel in the bar section |
+
+## Apps, Aegis, and Explorer
+
+Freenet is a peer-to-peer network. This computer runs one peer. Other peers are the rest of the network. The panel is how you look at this peer and open what it is hosting.
+
+The peer UI at http://127.0.0.1:7509/ is the node's own dashboard. App tiles come from that dashboard's Freenet Links list, and each one opens only on `127.0.0.1:7509`. The panel does not invent contract ids. If this node does not list an app, that tile is not shown. [Freenet Explorer](https://github.com/freenet/freenet-explorer) and the peer UI are this machine's own pages, so they are shown beside that list.
+
+Aegis is the password manager. The tile is shown when the node is connected and `~/.config/freenet/aegis-web.path` holds the web-container path this peer serves, so Aegis runs in Freenet mode. The GitHub Pages site stays a browser vault: this peer refuses its websocket. The vault delegate is registered on the peer, once, by Aegis itself. This plugin does not register it, and the tile does not add `register=1`.
+
+Freenet Explorer is the local index at http://127.0.0.1:8787/. The switch at the bottom starts and stops that user service. Kept files belong to the explorer.
+
+The plugin does not install Freenet, publish a website, or register a delegate.
 
 ## Freenet node
 

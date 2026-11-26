@@ -619,7 +619,6 @@ done
 for s in 'bin/setup --remove' 'omarchy plugin remove' \
   '~/.local/share/applications/io.mcmurray.freenet-explorer.desktop' \
   'https://freenet.org/quickstart/docker/' \
-  'omarchy plugin add file:///home/ianm/Development/omarchy-freenet-explorer --enable --yes' \
   'omarchy plugin add <git-url>' 'omarchy-restart-shell' 'FREENET_EXPLORER_DIR' 'FREENET_EXPLORER_KEPT' \
   'systemctl --user enable --now freenet-explorer' \
   'omarchy-shell shell summon io.mcmurray.freenet-explorer' \

@@ -57,7 +57,7 @@ These are not automatic rejections. They match the review of the other plugins i
 - `io.mcmurray.freenet-explorer` is not in the marketplace registry. `ianm.aegis` is, under a different id, so this id does not collide.
 - The automated baseline treats a `bash` fence in the README as a script. The official Freenet install command is in a `text` fence, and the plugin does not run it. The panel still shows that command when no node is installed.
 - `systemctl` and `bin/setup` will show up as service-management and installer capabilities. That asks for a maintainer look. The unit file is user-level, marked, and left alone when it was not written by this script.
-- The summary fetch is capped at 64 KiB. The dashboard fetch is capped at 256 KiB. An app page is capped at 64 KiB. The Aegis path file read is capped at 512 bytes. The node binary check looks only at `~/.local/bin/freenet`, `/usr/local/bin/freenet`, and `/usr/bin/freenet`.
+- The summary fetch is capped at 64 KiB. The dashboard fetch is capped at 256 KiB. Contract tiles use a built-in mark or a monogram. The plugin does not download a contract icon body. The Aegis path file read is capped at 512 bytes. The node binary check looks only at `~/.local/bin/freenet`, `/usr/local/bin/freenet`, and `/usr/bin/freenet`.
 - `preview.png` is a 471×563 crop with a sample peer id and `203.0.113.10`. `aegis.svg` has to be in the same commit as `Panel.qml`, or the Aegis tile has no icon.
 - Publish one commit and leave that branch head still. A later commit invalidates the review, which is what happened on Aegis.
 

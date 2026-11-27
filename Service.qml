@@ -22,9 +22,6 @@ Item {
   property int peerCount: -1              // -1 unknown, 0 up but not connected
   property var places: []
   property var dashboard: ({})
-  // path -> validated icon URL, or "" when this contract publishes none.
-  property var iconFor: ({})
-  property string iconJob: ""
   property int panelsOpen: 0
   property var unitInstalled: null        // null unknown, true/false after first check
   property bool nodeUnitAvailable: false
@@ -212,7 +209,6 @@ rm -f -- "$target"
     } else {
       root.refresh()
     }
-    root.considerIcons()
   }
 
   function panelClosed() {
@@ -321,8 +317,6 @@ rm -f -- "$target"
         root.peerCount = -1
         root.places = []
         root.dashboard = ({})
-        root.iconFor = ({})
-        root.iconJob = ""
         return
       }
       if (root.panelsOpen > 0)
@@ -373,52 +367,6 @@ rm -f -- "$target"
       root.peerCount = parsed.peerCount
       root.places = parsed.peerCount > 0 ? parsed.places : []
       root.dashboard = parsed.peerCount >= 0 ? parsed : ({})
-      root.considerIcons()
-    }
-  }
-
-  // One app page at a time, only while a panel is open. The URL is the
-  // contract's own sandboxed page, and only a same-contract image link is kept.
-  function rememberIcon(path, url) {
-    var next = ({})
-    var cur = root.iconFor || ({})
-    var key
-    for (key in cur)
-      next[key] = cur[key]
-    next[path] = url
-    root.iconFor = next
-  }
-
-  function considerIcons() {
-    if (iconFetch.pending || root.panelsOpen <= 0 || !root.nodeUp)
-      return
-    var places = root.places || []
-    var known = root.iconFor || ({})
-    var i
-    for (i = 0; i < places.length; i++) {
-      var path = places[i] && places[i].path
-      var page = Logic.sandboxPageUrl(path)
-      if (!page || known[path] !== undefined)
-        continue
-      root.iconJob = path
-      iconFetch.run(["curl", "-sS", "--max-time", "2", "--max-filesize", "65536", "--fail", "--proto", "=http", page])
-      return
-    }
-  }
-
-  Command {
-    id: iconFetch
-    stdout: StdioCollector { id: iconOut }
-    onDone: code => {
-      var path = root.iconJob
-      root.iconJob = ""
-      if (Logic.sandboxPageUrl(path)) {
-        var url = ""
-        if (code === 0)
-          url = Logic.iconUrlFromPage(iconOut.text, path)
-        root.rememberIcon(path, url)
-      }
-      root.considerIcons()
     }
   }
 

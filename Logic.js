@@ -129,65 +129,6 @@ function placeUrl(path) {
   return "http://127.0.0.1:7509" + path;
 }
 
-// The app page itself, still on this contract. The shell wrapper's icon is
-// the generic Freenet mark, so the icon is read from the sandboxed page.
-function sandboxPageUrl(path) {
-  if (typeof path !== "string" || !CONTRACT_PATH.test(path))
-    return "";
-  return "http://127.0.0.1:7509" + path + "?__sandbox=1";
-}
-
-// An image published by this contract. No other host, query, or parent path.
-function contractIconUrl(pagePath, href) {
-  if (typeof pagePath !== "string" || !CONTRACT_PATH.test(pagePath))
-    return "";
-  if (typeof href !== "string")
-    return "";
-  var raw = href.trim();
-  if (!raw || /[\s?#\\]/.test(raw) || /^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.indexOf("//") === 0 || raw.charAt(0) === ".")
-    return "";
-  var path = raw.charAt(0) === "/" ? raw : pagePath + raw;
-  if (path.indexOf(pagePath) !== 0 || path.indexOf("..") >= 0 || path.indexOf("//") >= 0)
-    return "";
-  if (path.length > 200 || !/\.(svg|png|webp|ico)$/i.test(path))
-    return "";
-  if (!/^\/v1\/contract\/web\/[1-9A-HJ-NP-Za-km-z]{8,128}\/[A-Za-z0-9._/-]+$/.test(path))
-    return "";
-  return "http://127.0.0.1:7509" + path;
-}
-
-function localIconUrl(url) {
-  if (typeof url !== "string" || url.indexOf("http://127.0.0.1:7509/") !== 0)
-    return "";
-  var path = url.slice("http://127.0.0.1:7509".length);
-  var match = /^(\/v1\/contract\/web\/[1-9A-HJ-NP-Za-km-z]{8,128}\/)/.exec(path);
-  if (!match)
-    return "";
-  return contractIconUrl(match[1], path) === url ? url : "";
-}
-
-// First same-contract icon link on the app page. Anything else is ignored.
-function iconUrlFromPage(html, pagePath) {
-  if (typeof html !== "string" || typeof pagePath !== "string" || !CONTRACT_PATH.test(pagePath))
-    return "";
-  var re = /<link\b[^>]*>/gi;
-  var match;
-  while ((match = re.exec(html)) !== null) {
-    var tag = match[0];
-    var rel = /\brel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i.exec(tag);
-    var relVal = rel ? (rel[1] || rel[2] || rel[3] || "") : "";
-    if (relVal.toLowerCase().indexOf("icon") < 0)
-      continue;
-    var href = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i.exec(tag);
-    if (!href)
-      continue;
-    var url = contractIconUrl(pagePath, href[1] || href[2] || href[3] || "");
-    if (url)
-      return url;
-  }
-  return "";
-}
-
 // Aegis runs in Freenet mode only when this peer serves the page. A public
 // https host is refused by the peer (403) and the app then stays a browser vault.
 // `text` is one local path, or the same path as a 127.0.0.1:7509 URL.

@@ -86,7 +86,7 @@ The panel's Start button does not need this.
 
 ## What the panel shows
 
-The top of the panel is this node's own dashboard: peer count, up and down rates, storage, and the apps from its Freenet Links list, plus Freenet Explorer, the peer UI, and Aegis. Each app is a block with its icon and its name. The hosted count at the top right opens the peer UI.
+The top of the panel is this node's own dashboard: peer count, up and down rates, storage, and the apps from its Freenet Links list, plus Freenet Explorer, the peer UI, and Aegis. Each app is a block with a built-in mark and its name. The hosted count at the top right opens the peer UI.
 
 Numbers, peer rows, and app names come from http://127.0.0.1:7509/, and only while the panel is open. The hosted and kept counts in the title come from the explorer's `GET /api/summary`.
 
@@ -213,7 +213,7 @@ The plugin must not weaken Freenet or Freenet Explorer.
 
 - It never listens on a port, never proxies 8787 or 7509, never changes the firewall, and never passes the explorer a port or bind address.
 - Its only HTTP request to the explorer is a GET of `http://127.0.0.1:8787/api/summary` with the default Host header, a two-second limit, and a 64 KiB cap.
-- While a popup is open and port 7509 accepts a connection, it also GETs `http://127.0.0.1:7509/` and reads the peer count, the Freenet Links names, the peer table, and the hosting table. For each of those apps it then GETs that contract's own page, capped at 64 KiB, and keeps an icon only when that page links one on the same contract. It does not follow redirects, other hosts, or any other link. A place opens only as `http://127.0.0.1:7509/v1/contract/web/<id>/` from that list. A peer opens only as `http://127.0.0.1:7509/peer/<address>` and a hosted contract only as `http://127.0.0.1:7509/contract/<key>`. Aegis opens only as `http://127.0.0.1:7509/v1/contract/web/<id>/`, and only when `~/.config/freenet/aegis-web.path` contains that path. The plugin does not open the GitHub Pages site. The Freenet Explorer tile opens only `http://127.0.0.1:8787/`. The Peer UI tile and the hosted count open only `http://127.0.0.1:7509/`.
+- While a popup is open and port 7509 accepts a connection, it also GETs `http://127.0.0.1:7509/` and reads the peer count, the Freenet Links names, the peer table, and the hosting table. It does not follow redirects, other hosts, or any other link. Contract tiles use a built-in mark or a monogram. The plugin does not download a contract icon body and does not give a contract URL to an image loader. A place opens only as `http://127.0.0.1:7509/v1/contract/web/<id>/` from that list. A peer opens only as `http://127.0.0.1:7509/peer/<address>` and a hosted contract only as `http://127.0.0.1:7509/contract/<key>`. Aegis opens only as `http://127.0.0.1:7509/v1/contract/web/<id>/`, and only when `~/.config/freenet/aegis-web.path` contains that path. The plugin does not open the GitHub Pages site. The Freenet Explorer tile opens only `http://127.0.0.1:8787/`. The Peer UI tile and the hosted count open only `http://127.0.0.1:7509/`.
 - It never calls the explorer endpoints that make the node act.
 - It never shows contract bytes or kept-file contents. Place names are plain text taken from that link list. It shows a count and runs local commands.
 - It does not read or write the explorer database. It only checks that the kept folder exists and opens it. The child-safety quarantine lives in that database and is left alone.

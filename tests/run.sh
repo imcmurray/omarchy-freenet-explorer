@@ -163,7 +163,7 @@ done < <(grep -ohE "http://[^\"' )]*" "${qml_js[@]}")
 t "C9 api/summary present" grep -qF 'api/summary' "${qml_js[@]}"
 t "C9 exact curl argv" has Service.qml '["curl", "-sS", "--max-time", "2", "--max-filesize", "65536", "--fail", "--proto", "=http", Logic.SUMMARY_URL]'
 t "C9 exact dashboard curl argv" has Service.qml '["curl", "-sS", "--max-time", "2", "--max-filesize", "262144", "--fail", "--proto", "=http", Logic.PEER_UI_URL]'
-t "C9 exact icon curl argv" has Service.qml '["curl", "-sS", "--max-time", "2", "--max-filesize", "65536", "--fail", "--proto", "=http", page]'
+t "C9 no contract icon fetch" no grep -qE 'sandboxPageUrl|iconUrlFromPage|iconFetch|localIconUrl' Service.qml Panel.qml Logic.js
 # Real calls only: Panel.qml shows the node installer command as display text.
 curl_calls=$(grep -hE "[\"']curl[\"']" "${qml_js[@]}" || true)
 t "C9 no -L/--location/-X/-H/--data on curl calls" no grep -qE -- '"(-L|--location|-X|-H|--header|--data[a-z-]*)"' <<<"$curl_calls"
@@ -204,7 +204,8 @@ plain=$(grep -cF 'textFormat: Text.PlainText' Panel.qml || true)
 [[ $texts == "$plain" ]] || bad "B5.6 Text items ($texts) without PlainText ($plain plain)"
 t "B5.5 node install command shown" has Panel.qml 'curl -fsSL https://freenet.org/install.sh | sh'
 t "B5.5 popup does not mention Docker" no grep -qi docker Panel.qml
-t "B5 apps use a validated icon url" has Panel.qml 'Logic.localIconUrl'
+t "B5 contract tiles use a built-in mark" has Panel.qml 'Logic.monogram(modelData.label)'
+t "B5 no remote image source" no grep -qE 'source:.*http://' Panel.qml
 t "B5 explorer row is a switch" has Panel.qml 'explorerSwitch'
 t "B5 explorer is an app tile" has Panel.qml 'explorerApp'
 t "B5 peer UI is an app tile" has Panel.qml 'peerApp'
@@ -545,30 +546,7 @@ eq("listed parsed wins", L.listedCount("1", 12), 12);
 eq("listed junk", L.listedCount("18 contracts", 12), 12);
 eq("listed empty", L.listedCount("", 4), 4);
 eq("listed huge", L.listedCount("1234567", 1), 1);
-const logo = atlas + "freenet_logo.svg";
-eq("sandbox page", L.sandboxPageUrl(atlas), "http://127.0.0.1:7509" + atlas + "?__sandbox=1");
-eq("sandbox rejects query", L.sandboxPageUrl(atlas + "?x=1"), "");
 eq("place url has no query", L.placeUrl(atlas).indexOf("?") < 0, true);
-eq("icon absolute", L.contractIconUrl(atlas, logo), "http://127.0.0.1:7509" + logo);
-eq("icon relative", L.contractIconUrl(atlas, "freenet_logo.svg"), "http://127.0.0.1:7509" + logo);
-eq("icon unquoted", L.iconUrlFromPage("<link rel=icon type=image/svg+xml href=" + logo + ">", atlas), "http://127.0.0.1:7509" + logo);
-eq("icon quoted", L.iconUrlFromPage('<link rel="icon" href="' + logo + '">', atlas), "http://127.0.0.1:7509" + logo);
-eq("icon shortcut", L.iconUrlFromPage("<link rel='shortcut icon' href='favicon.ico'>", atlas), "http://127.0.0.1:7509" + atlas + "favicon.ico");
-eq("icon skips remote", L.iconUrlFromPage('<link rel=icon href="https://cdn.example/a.svg"><link rel=icon href="' + logo + '">', atlas), "http://127.0.0.1:7509" + logo);
-eq("icon https rejected", L.contractIconUrl(atlas, "https://cdn.example/a.svg"), "");
-eq("icon data rejected", L.contractIconUrl(atlas, "data:image/svg+xml,abcd"), "");
-eq("icon parent rejected", L.contractIconUrl(atlas, "../freenet_logo.svg"), "");
-eq("icon query rejected", L.contractIconUrl(atlas, "freenet_logo.svg?x=1"), "");
-eq("icon other contract", L.contractIconUrl(atlas, river + "freenet_logo.svg"), "");
-eq("icon javascript", L.contractIconUrl(atlas, "javascript:alert(1)"), "");
-eq("icon protocol relative", L.contractIconUrl(atlas, "//cdn.example/a.svg"), "");
-eq("icon stylesheet ignored", L.iconUrlFromPage('<link rel=stylesheet href="' + logo + '">', atlas), "");
-eq("img is not an icon", L.iconUrlFromPage('<img src="' + logo + '">', atlas), "");
-eq("local icon ok", L.localIconUrl("http://127.0.0.1:7509" + logo), "http://127.0.0.1:7509" + logo);
-eq("local icon query", L.localIconUrl("http://127.0.0.1:7509" + logo + "?x=1"), "");
-eq("local icon host", L.localIconUrl("http://127.0.0.1:8787" + logo), "");
-eq("local icon evil host", L.localIconUrl("http://127.0.0.1:7509.evil/a.svg"), "");
-eq("local icon sandbox", L.localIconUrl(L.sandboxPageUrl(atlas)), "");
 eq("mark atlas", L.appMark("Atlas"), "atlas");
 eq("mark river", L.appMark("River Chat"), "river");
 eq("mark mail", L.appMark("Freenet Mail"), "mail");

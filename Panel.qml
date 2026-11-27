@@ -103,8 +103,6 @@ Item {
   readonly property var leadRows: { var parts = splitRows(rows); return parts.lead }
   readonly property var appRows: { var parts = splitRows(rows); return parts.apps }
   readonly property var tailRows: { var parts = splitRows(rows); return parts.tail }
-  // Replaced as a whole when an icon arrives, so each tile binding tracks it.
-  readonly property var iconMap: service && service.iconFor ? service.iconFor : ({})
 
   readonly property string legendText: filtering
     ? "type to filter    enter open    esc clear"
@@ -738,7 +736,6 @@ Item {
       readonly property string localSvg: markName === "aegis" ? "aegis.svg"
         : (markName === "explorer" ? "icon.svg" : "")
       readonly property string letter: Logic.monogram(modelData.label)
-      readonly property string iconSource: Logic.localIconUrl(root.iconMap[modelData.path] || "")
       readonly property int tileWidth: {
         var gap = appFlow.spacing
         var full = appFlow.width
@@ -776,19 +773,6 @@ Item {
           }
 
           Image {
-            id: appIcon
-            anchors.fill: parent
-            anchors.margins: Style.space(6)
-            source: tile.iconSource
-            fillMode: Image.PreserveAspectFit
-            asynchronous: true
-            smooth: true
-            sourceSize.width: 64
-            sourceSize.height: 64
-            visible: status === Image.Ready && tile.localSvg === ""
-          }
-
-          Image {
             id: localMark
             anchors.fill: parent
             anchors.margins: Style.space(6)
@@ -814,7 +798,7 @@ Item {
             anchors.fill: parent
             anchors.margins: Style.space(8)
             antialiasing: true
-            visible: appIcon.status !== Image.Ready && localMark.status !== Image.Ready && tile.markName !== "" && tile.markName !== "explorer"
+            visible: localMark.status !== Image.Ready && tile.markName !== "" && tile.markName !== "explorer"
             property color ink: root.foreground
             property string shownMark: tile.markName
             onPaint: root.paintMark(markCanvas, shownMark)
@@ -827,7 +811,7 @@ Item {
 
           Text {
             anchors.centerIn: parent
-            visible: appIcon.status !== Image.Ready && localMark.status !== Image.Ready && tile.markName === ""
+            visible: localMark.status !== Image.Ready && tile.markName === ""
             text: tile.letter
             textFormat: Text.PlainText
             color: root.foreground
